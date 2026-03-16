@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "OTEL_DENO=true deno serve --env-file server.ts"
+
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
