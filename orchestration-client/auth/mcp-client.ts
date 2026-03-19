@@ -48,6 +48,10 @@ export class NotionMcpClient {
     const storedState = this.retrieveSecurely("state");
     const codeVerifier = this.retrieveSecurely("codeVerifier");
 
+    console.log("Stored state:", storedState);
+    const urlState = new URL(callbackUrl).searchParams.get("state");
+    console.log("Callback state:", urlState);
+
     const code = await handleCallback(callbackUrl, storedState, codeVerifier);
 
     const tokens = await exchangeCodeForTokens(
@@ -115,19 +119,19 @@ export class NotionMcpClient {
     }
   }
 
+  private storage = new Map<string, string>();
+
   private storeSecurely(key: string, value: string): void {
-    // Implement secure storage
-    // TODO: Sescure session storage?
+    this.storage.set(key, value);
   }
 
   private retrieveSecurely(key: string): string {
-    // Implement secure retrieval
-    // TODO: Sescure session storage?
-    return "";
+    const value = this.storage.get(key);
+    if (!value) throw new Error(`Missing stored value for key: ${key}`);
+    return value;
   }
 
   private deleteSecurely(key: string): void {
-    // Implement secure deletion
-    // TODO: Sescure session storage?
+    this.storage.delete(key);
   }
 }

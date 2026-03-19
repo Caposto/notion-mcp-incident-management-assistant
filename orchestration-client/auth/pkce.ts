@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 
 function base64URLEncode(str: Buffer): string {

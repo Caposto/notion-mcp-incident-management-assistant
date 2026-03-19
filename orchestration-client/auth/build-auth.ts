@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 import { type OAuthMetadata } from "./discover.ts";
 
 export function buildAuthorizationUrl(
