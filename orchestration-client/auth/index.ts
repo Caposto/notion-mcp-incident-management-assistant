@@ -1,3 +1,2 @@
-export { NotionMcpClient } from "./mcp-client.ts";
-export { connectToNotionMcp, createMcpClient } from "./create-client.ts";
+export { NotionMcpClient, connectToNotionMcp, createMcpClient } from "./mcp-client.ts";
 export { discoverOAuthMetadata, type OAuthMetadata } from "./discover.ts";

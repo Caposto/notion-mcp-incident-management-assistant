@@ -1,4 +1,6 @@
-A service that receives and processes Slack events, authenticates to Notion MCP
+# Slack Orchestration Client
+
+A Notion MCP Client service that receives and processes Slack events
 
 Core Features:
 1. Listens for alert pages once an Engineer responds to alert with "/create-incident sev component alert" command (human in the loop): 

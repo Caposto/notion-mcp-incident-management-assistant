@@ -3,7 +3,7 @@
 ### Setup
 
 1. Create a `.env` file in the `payments-api` directory by filling in the values from `.env.local`.
-2. 
+  
 ## docker-otel-lgtm 
 
 For local development and testing spin up the [docker-otel-lgtm](https://github.com/grafana/docker-otel-lgtm/tree/main?tab=readme-ov-file). 
