@@ -25,3 +25,5 @@ Then, in another terminal, start the Deno API:
 cd payments-api
 deno run dev
 ```
+
+Follow the README in the `notion-orchestration-app` directory to set up the Slack app and start the Bolt server.
