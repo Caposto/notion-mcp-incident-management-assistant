@@ -11,6 +11,8 @@ const app = new App({
   logLevel: LogLevel.DEBUG,
 });
 
+// TODO: Initialize Notion MCP Client here
+
 /** Register Listeners */
 registerListeners(app);
 
