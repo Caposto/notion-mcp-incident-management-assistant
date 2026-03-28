@@ -39,7 +39,7 @@ const server = createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(`
       <html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#eee">
-        <div style="text-align:center"><h1>✅ Authorized!</h1><p>Return to your terminal.</p></div>
+        <div style="text-align:center"><h1>Authorized!</h1><p>Return to your terminal.</p></div>
       </body></html>
     `);
   } else {

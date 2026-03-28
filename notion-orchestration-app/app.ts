@@ -9,6 +9,11 @@ const app = new App({
   socketMode: true,
   appToken: process.env.SLACK_APP_TOKEN,
   logLevel: LogLevel.DEBUG,
+  ignoreSelf: false,
+});
+
+app.error(async (error) => {
+  app.logger.error('Global error:', error);
 });
 
 // TODO: Initialize Notion MCP Client here
