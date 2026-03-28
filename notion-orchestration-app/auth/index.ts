@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
+import process from "node:process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
@@ -357,7 +358,10 @@ export class NotionMcpClient {
     );
   }
 
-  async handleCallback(callbackUrl: string, redirectUri: string): Promise<void> {
+  async handleCallback(
+    callbackUrl: string,
+    redirectUri: string,
+  ): Promise<void> {
     const storedState = this.storage.get("state");
     const codeVerifier = this.storage.get("codeVerifier");
 
@@ -386,10 +390,18 @@ export class NotionMcpClient {
     if (!this.accessToken) throw new Error("Not authenticated");
 
     try {
-      this.client = await createMcpClient(this.serverUrl, this.accessToken, false);
+      this.client = await createMcpClient(
+        this.serverUrl,
+        this.accessToken,
+        false,
+      );
     } catch {
       console.warn("Streamable HTTP failed, falling back to SSE");
-      this.client = await createMcpClient(this.serverUrl, this.accessToken, true);
+      this.client = await createMcpClient(
+        this.serverUrl,
+        this.accessToken,
+        true,
+      );
     }
 
     return this.client;
