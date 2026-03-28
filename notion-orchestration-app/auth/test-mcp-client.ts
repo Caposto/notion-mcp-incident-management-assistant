@@ -82,7 +82,7 @@ console.log("   Connected!\n");
 console.log("🛠️  Available tools:");
 const { tools } = await mcpClient.listTools();
 for (const tool of tools) {
-  console.log(`   • ${tool.name}`);
+  console.log(tool);
 }
 
 console.log(`\n✅ Success — ${tools.length} tools available.`);
