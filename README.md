@@ -30,4 +30,3 @@ Follow the README in the `notion-orchestration-app` directory to set up the Slac
 
 # TODOS
 - Prevent multiple notion mcp sessions for the same incident
-- Update app scope to allow app_mention events
