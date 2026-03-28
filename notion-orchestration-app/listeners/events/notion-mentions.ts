@@ -26,11 +26,12 @@ const notionMentionCallback = async ({
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   try {
     logger.debug("Received app_mention event:", event);
+    const command = validateCommand(event.text);
 
-    if (!event.thread_ts || !event.text || !validateCommand(event.text) || validateCommand(event.text) === Commands.INVALID) {
+    if (!event.thread_ts || !event.text || !command || command === Commands.INVALID) {
       await defaultHandler(event, say);
       logger.debug("Handled app_mention with default handler.");
-    } else {
+    } else if (command === Commands.CREATE_INCIDENT) {
       const result = await notionMcpClient.callTool({
         name: "notion-create-pages",
         arguments: {
@@ -49,6 +50,16 @@ const notionMentionCallback = async ({
           : JSON.stringify(result);
       await say({
         text: `Notion page created: ${resultText}`,
+        thread_ts: event.thread_ts ?? event.ts,
+      });
+    } else if (command === Commands.UPDATE_INCIDENT) {
+      await say({
+        text: `Update incident command received with details: ${event.text}`,
+        thread_ts: event.thread_ts ?? event.ts,
+      });
+    } else if (command === Commands.CLOSE_INCIDENT) {
+      await say({
+        text: `Close incident command received with details: ${event.text}`,
         thread_ts: event.thread_ts ?? event.ts,
       });
     }
