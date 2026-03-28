@@ -23,6 +23,7 @@ app.error(async (error) => {
 registerListeners(app);
 
 /** Notion MCP Client Initialization */
+// TODO: Is there a cleaner and more secure way to handle this client initializastion and auth flow?
 // Future Improvement: MCP Gateway like https://github.com/obot-platform/obot
 const client = new NotionMcpClient();
 const CALLBACK_PORT = 9876;

@@ -92,16 +92,17 @@ Core Features:
    - Creates an incident summary poge in Notion, generating a summary, impact, timeline, related knowledge, and next steps
    - Sends a message to the Slack channel with the incident summary and a link to the incident page in Notion.
 2. Update incident page with new information when Engineer responds to alert with "/update-incident body" command.
-3. Add comments to incident page for postmortem when Engineer responds to alert with "/add-comment body" command.
-4. Close incident when Engineer responds to alert with "/close-incident" command.
+3. Close incident when Engineer responds to alert with "/close-incident" command.
    - Drafts a postmortem summary and adds it to the incident page in Notion.
-   - Writes a follow-up task in Notion for the responsible team to address any action items identified in the postmortem.
-   - Writes incident to Notion database??
+   - Writes a follow-up Jira task in Notion for the responsible team to address any action items identified in the postmortem.
+   - Writes incident to Notion database
+
+Service DB Schema
+
+id | serviceName | owningTeam | runbookLink | boardLink | postMortems
 
 The only definitive commands should be the open and close. The rest should be free flowing chat prompts that the bot
 can send to Notion MCP.
 
-Might have to pivot from '/' commands
-
-Reach Features:
-* Command to manage follow up tasks for an incident
+Reach Feature:
+* Integrate with Grafana MCP. Use it to pull dashboards, logs, and other relevant information into the incident page in Notion. Auto update alerts and runbooks, pull teams etc. Feed relevant action items and RCA from Grafana to make improvements. Can also get on call details and other teams that might need to be paged based on the runbook details.
