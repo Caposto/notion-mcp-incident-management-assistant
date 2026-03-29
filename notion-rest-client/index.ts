@@ -26,10 +26,14 @@ export async function findIncidentByThread(
 
   if (response.results.length > 0) {
     const page = response.results[0];
-    if ("url" in page) {
+    const status = page.properties["Status"]?.select?.name ?? "Unknown";
+    if ("url" in page && status !== "Closed") {
       return page.url;
     }
   }
 
   return null;
 }
+// For testing in debugger CLI: node --env-file=.env notion-rest-client/index.ts
+// const testThreadTs = "1709856000.000100";
+// const result = await findIncidentByThread(testThreadTs);
