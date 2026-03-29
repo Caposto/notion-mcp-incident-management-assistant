@@ -1,0 +1,16 @@
+{
+  "name": "coffee-grinds-service",
+  "version": "1.0.0",
+  "description": "This is a fictional service used to help demonstrate the capabilities of the Notion MCP Indient Management Assistant. It is a simple API that is \"multi-region\" and setup to trigger a 5XX alert.",
+  "main": "server.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
