@@ -1,14 +1,18 @@
-import type { AllMiddlewareArgs, EventFromType, SayFn, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type {
+  AllMiddlewareArgs,
+  EventFromType,
+  Logger,
+  SayFn,
+  SlackEventMiddlewareArgs,
+} from "@slack/bolt";
 import { notionMcpClient } from "../../app.ts";
-
-// Handlers:
-// Default message - Explains list of valid @ commands and format
-// @create-incident - Creates a new incident page in Notion with the provided details
-// Tools: notion-create-pages, notion-search (for runbooks, etc)
-// @update-incident - Updates an existing incident page in Notion with the provided details. Captures timestamp 
-// Tools: notion-update-page, notion-create-comment
-// @close-incident - Closes an existing incident page in Notion, kicks of post-incident workflow (RCA, Jira Ticket Generation, database updates etc)
-// Tools: notion-update-page, notion-create-comment, notion-search (for RCA templates, etc), notion-create-pages
+import { NOTION_IDS } from "../../notion-config.ts";
+import { runAgent } from "../../agent/index.ts";
+import {
+  CREATE_INCIDENT_PROMPT,
+  UPDATE_INCIDENT_PROMPT,
+  CLOSE_INCIDENT_PROMPT,
+} from "../../agent/prompts.ts";
 
 enum Commands {
   CREATE_INCIDENT = "create-incident",
@@ -19,68 +23,209 @@ enum Commands {
 
 const notionMentionCallback = async ({
   event,
-  context,
-  client,
   logger,
-  say
+  say,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   try {
     logger.debug("Received app_mention event:", event);
     const command = validateCommand(event.text);
+    const threadTs = event.thread_ts ?? event.ts;
 
-    if (!event.thread_ts || !event.text || !command || command === Commands.INVALID) {
+    if (
+      !event.thread_ts ||
+      !event.text ||
+      !command ||
+      command === Commands.INVALID
+    ) {
       await defaultHandler(event, say);
-      logger.debug("Handled app_mention with default handler.");
-    } else if (command === Commands.CREATE_INCIDENT) {
-      const result = await notionMcpClient.callTool({
-        name: "notion-create-pages",
-        arguments: {
-          pages: [
-            {
-              properties: { title: "Incident MCP Test #2" },
-              content:
-                "## Summary\nThis is a test incident page created via the Notion MCP.\n\n## Details\nThe quick brown fox jumps over the lazy dog.",
-            },
-          ],
-        },
-      });
-      const resultText =
-        result.content[0]?.type === "text"
-          ? result.content[0].text
-          : JSON.stringify(result);
-      await say({
-        text: `Notion page created: ${resultText}`,
-        thread_ts: event.thread_ts ?? event.ts,
-      });
+      return;
+    }
+
+    if (command === Commands.CREATE_INCIDENT) {
+      await handleCreateIncident(event, threadTs, say, logger);
     } else if (command === Commands.UPDATE_INCIDENT) {
-      await say({
-        text: `Update incident command received with details: ${event.text}`,
-        thread_ts: event.thread_ts ?? event.ts,
-      });
+      await handleUpdateIncident(event, threadTs, say, logger);
     } else if (command === Commands.CLOSE_INCIDENT) {
-      await say({
-        text: `Close incident command received with details: ${event.text}`,
-        thread_ts: event.thread_ts ?? event.ts,
-      });
+      await handleCloseIncident(event, threadTs, say, logger);
     }
   } catch (error) {
     logger.error("Error handling app_mention event:", error);
+    await say({
+      text: "Something went wrong! Please try again later."
+    });
   }
 };
+
+// ─── create-incident ────────────────────────────────────────────────
+
+async function handleCreateIncident(
+  event: EventFromType<"app_mention">,
+  threadTs: string,
+  say: SayFn,
+  _logger: Logger,
+) {
+  // 1. Duplicate check
+  const existingIncident = await findIncidentByThread(threadTs);
+  if (existingIncident) {
+    await say({
+      text: `An incident page already exists for this thread: ${existingIncident}`,
+      thread_ts: threadTs,
+    });
+    return;
+  }
+
+  // 2. Let the user know we're working on it (Slack best practice — respond fast)
+  await say({
+    text: "🔍 Creating incident page... Searching for service info, runbooks, and past incidents.",
+    thread_ts: threadTs,
+  });
+
+  // 3. Strip the bot mention and command from the message to get the details
+  const details = event.text
+    .replace(/<@[A-Z0-9]+>/g, "") // remove bot mention
+    .replace(/create-incident/i, "") // remove command
+    .trim();
+
+  // 4. Build the user message with all the context the agent needs
+  const userMessage = `Create an incident page with the following context:
+
+  **Details from engineer:** ${details || "No additional details provided"}
+  **Slack Thread ID:** ${threadTs}
+  **Slack Channel:** ${event.channel}
+  **Commander:** <@${event.user}>
+  **Current time (UTC):** ${new Date().toISOString()}
+
+  Search for relevant service info, runbooks, and past incidents, then create the incident page.`;
+
+  // 5. Run the agent — Claude decides which tools to call
+  const agentResponse = await runAgent(
+    CREATE_INCIDENT_PROMPT,
+    userMessage,
+    notionMcpClient,
+  );
+
+  // 6. Post the agent's summary back to Slack
+  await say({
+    text: agentResponse,
+    thread_ts: threadTs,
+  });
+}
+
+// ─── update-incident ────────────────────────────────────────────────
+
+async function handleUpdateIncident(
+  event: EventFromType<"app_mention">,
+  threadTs: string,
+  say: SayFn,
+  _logger: Logger,
+) {
+  // 1. Find the incident page
+  const incidentPageId = await findIncidentByThread(threadTs);
+  if (!incidentPageId) {
+    await say({
+      text: "No incident found for this thread. Use `create-incident` first.",
+      thread_ts: threadTs,
+    });
+    return;
+  }
+
+  // 2. Strip the command to get the update text
+  const updateText = event.text
+    .replace(/<@[A-Z0-9]+>/g, "")
+    .replace(/update-incident/i, "")
+    .trim();
+
+  // TODO: Implement using runAgent with UPDATE_INCIDENT_PROMPT
+  // The user message should include:
+  //   - The incident page ID (extracted from the URL)
+  //   - The engineer's update text
+  //   - The current timestamp
+  // The agent will fetch the page, decide what to update, and execute the changes.
+
+  await say({
+    text: `Update incident received: "${updateText}" — agent integration coming soon.`,
+    thread_ts: threadTs,
+  });
+}
+
+// ─── close-incident ─────────────────────────────────────────────────
+
+async function handleCloseIncident(
+  event: EventFromType<"app_mention">,
+  threadTs: string,
+  say: SayFn,
+  _logger: Logger,
+) {
+  // 1. Find the incident page
+  const incidentPageId = await findIncidentByThread(threadTs);
+  if (!incidentPageId) {
+    await say({
+      text: "No incident found for this thread. Use `create-incident` first.",
+      thread_ts: threadTs,
+    });
+    return;
+  }
+
+  // TODO: Implement using runAgent with CLOSE_INCIDENT_PROMPT
+  // The user message should include:
+  //   - The incident page ID
+  //   - The current timestamp
+  // The agent will fetch the page, draft a postmortem, update status, and check runbook completeness.
+
+  await say({
+    text: `Close incident received — agent integration coming soon.`,
+    thread_ts: threadTs,
+  });
+}
+
+// ─── Shared helpers ─────────────────────────────────────────────────
 
 async function defaultHandler(event: EventFromType<"app_mention">, say: SayFn) {
   await say({
     text: `Hello <@${event.user}>! Please call me in an alert thread to execute commands related to incident management in Notion. Here are the commands you can use: 
-    \nCreate Incident: @notion-orchestration-app create-incident <severity> <details> 
-    \nUpdate Incident: @notion-orchestration-app update-incident <updated_details>
-    \nClose Incident: @notion-orchestration-app close-incident`,
+    \n*Create Incident:* \`@bot create-incident {initial details: severity, logs, etc.}\`
+    \n*Update Incident:* \`@bot update-incident {what changed, actions taken, teams paged}\`
+    \n*Close Incident:* \`@bot close-incident\``,
     thread_ts: event.thread_ts ?? event.ts,
   });
 }
 
-// TODO: Create an incident DB in Notion that has the thread as the incident ID and an open/close status property. When a command is received, check if the thread has an open incident page in Notion and route the command accordingly. If no open incident page exists for the thread, only allow the create-incident command to be executed. If an open incident page does exist, allow update-incident and close-incident commands to be executed and have them update the incident page in Notion accordingly. This will ensure that updates and closes are always associated with an existing incident page in Notion and prevent orphaned updates or closes that aren't associated with any incident.
+/**
+ * Search the Incidents DB for a page matching this Slack thread.
+ * Returns the Notion page URL if found, null otherwise.
+ */
+async function findIncidentByThread(threadTs: string): Promise<string | null> {
+  try {
+    const result = await notionMcpClient.callTool({
+      name: "notion-search",
+      arguments: {
+        query: threadTs,
+        data_source_url: `collection://${NOTION_IDS.INCIDENTS_DS}`,
+        page_size: 1,
+        max_highlight_length: 0,
+      },
+    });
 
-// Handle parsing the command and its details from the message text
+    // Parse the MCP response — it returns content blocks
+    const text = result.content
+      ?.map((block: { type: string; text?: string }) =>
+        block.type === "text" ? block.text : "",
+      )
+      .join("");
+
+    // If the response contains a page URL, extract it
+    if (text && text.includes("notion.so")) {
+      const urlMatch = text.match(/https:\/\/www\.notion\.so\/[a-f0-9]+/);
+      if (urlMatch) return urlMatch[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error searching for incident:", error);
+    return null;
+  }
+}
+
 function validateCommand(text: string): string {
   for (const command of Object.values(Commands)) {
     if (text.includes(command)) {

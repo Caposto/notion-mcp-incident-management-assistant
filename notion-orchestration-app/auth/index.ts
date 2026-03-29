@@ -1,6 +1,5 @@
 import { randomBytes, createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
-import process from "node:process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
