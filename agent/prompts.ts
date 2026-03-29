@@ -1,4 +1,4 @@
-import { NOTION_IDS } from "../notion-config.ts";
+import { NOTION_IDS } from "../config/notion-config.ts";
 
 export const CREATE_INCIDENT_PROMPT = `You are an incident management agent. Your job is to create a structured incident page in Notion when an engineer reports an issue.
 

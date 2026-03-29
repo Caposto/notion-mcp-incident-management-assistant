@@ -6,8 +6,8 @@ import type {
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
 import { notionMcpClient } from "../../app.ts";
-import { NOTION_IDS } from "../../notion-config.ts";
 import { runAgent } from "../../agent/index.ts";
+import { findIncidentByThread } from "../../notion-rest-client/index.ts";
 import {
   CREATE_INCIDENT_PROMPT,
   UPDATE_INCIDENT_PROMPT,
@@ -42,7 +42,21 @@ const notionMentionCallback = async ({
     }
 
     if (command === Commands.CREATE_INCIDENT) {
-      await handleCreateIncident(event, threadTs, say, logger);
+      // await handleCreateIncident(event, threadTs, say, logger);
+      const existingIncident = await findIncidentByThread(threadTs);
+      if (existingIncident) {
+        await say({
+          text: `An incident page already exists for this thread: ${existingIncident}`,
+          thread_ts: threadTs,
+        });
+        return;
+      }
+
+      // 2. Let the user know we're working on it (Slack best practice — respond fast)
+      await say({
+        text: "🔍 Creating incident page... Searching for service info, runbooks, and past incidents.",
+        thread_ts: threadTs,
+      });
     } else if (command === Commands.UPDATE_INCIDENT) {
       await handleUpdateIncident(event, threadTs, say, logger);
     } else if (command === Commands.CLOSE_INCIDENT) {
@@ -58,6 +72,9 @@ const notionMentionCallback = async ({
 
 // ─── create-incident ────────────────────────────────────────────────
 
+// FIXME: An improvement on this would be for the orchestration app to pull in the 
+// alert details and pass it in the userMessage, rather than relying on the engineer to
+// type it out in an "@" mention. This would also allow us to pull in structured data from the alert payload, like severity, //affected services, etc.
 async function handleCreateIncident(
   event: EventFromType<"app_mention">,
   threadTs: string,
@@ -188,42 +205,6 @@ async function defaultHandler(event: EventFromType<"app_mention">, say: SayFn) {
     \n*Close Incident:* \`@bot close-incident\``,
     thread_ts: event.thread_ts ?? event.ts,
   });
-}
-
-/**
- * Search the Incidents DB for a page matching this Slack thread.
- * Returns the Notion page URL if found, null otherwise.
- */
-async function findIncidentByThread(threadTs: string): Promise<string | null> {
-  try {
-    const result = await notionMcpClient.callTool({
-      name: "notion-search",
-      arguments: {
-        query: threadTs,
-        data_source_url: `collection://${NOTION_IDS.INCIDENTS_DS}`,
-        page_size: 1,
-        max_highlight_length: 0,
-      },
-    });
-
-    // Parse the MCP response — it returns content blocks
-    const text = result.content
-      ?.map((block: { type: string; text?: string }) =>
-        block.type === "text" ? block.text : "",
-      )
-      .join("");
-
-    // If the response contains a page URL, extract it
-    if (text && text.includes("notion.so")) {
-      const urlMatch = text.match(/https:\/\/www\.notion\.so\/[a-f0-9]+/);
-      if (urlMatch) return urlMatch[0];
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error searching for incident:", error);
-    return null;
-  }
 }
 
 function validateCommand(text: string): string {

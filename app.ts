@@ -3,7 +3,7 @@ import 'dotenv/config';
 import registerListeners from './listeners/index.ts';
 import process from "node:process";
 import { createServer } from "node:http";
-import { NotionMcpClient } from "./auth/index.ts";
+import { NotionMcpClient } from "./notion-mcp-client/index.ts";
 
 /** Slack App Initialization */
 const app = new App({
