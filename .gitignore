@@ -2,3 +2,9 @@
 .vscode
 /lgtm
 notion-mcp-tools.json
+
+node_modules
+.DS_Store
+dist
+.env*
+!.env.sample

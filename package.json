@@ -28,7 +28,9 @@
     "url": "https://github.com/slack-samples/bolt-ts-starter-template/issues"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@notionhq/client": "^5.15.0",
     "@slack/bolt": "^4.6.0",
     "dotenv": "~17.3.1",
     "oauth": "^0.10.2"
