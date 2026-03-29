@@ -11,7 +11,6 @@ const notion = new Client({ auth: process.env.NOTION_API_KEY });
  * Returns the Notion page URL if found, null otherwise.
  *
  * NOTE: The filter assumes a rich_text property named "Slack Thread ID"
- * exists on the Incidents data source. Adjust the property name if yours differs.
  */
 export async function findIncidentByThread(
   threadTs: string,

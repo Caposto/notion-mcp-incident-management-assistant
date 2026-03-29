@@ -42,21 +42,7 @@ const notionMentionCallback = async ({
     }
 
     if (command === Commands.CREATE_INCIDENT) {
-      // await handleCreateIncident(event, threadTs, say, logger);
-      const existingIncident = await findIncidentByThread(threadTs);
-      if (existingIncident) {
-        await say({
-          text: `An incident page already exists for this thread: ${existingIncident}`,
-          thread_ts: threadTs,
-        });
-        return;
-      }
-
-      // 2. Let the user know we're working on it (Slack best practice — respond fast)
-      await say({
-        text: "🔍 Creating incident page... Searching for service info, runbooks, and past incidents.",
-        thread_ts: threadTs,
-      });
+      await handleCreateIncident(event, threadTs, say, logger);
     } else if (command === Commands.UPDATE_INCIDENT) {
       await handleUpdateIncident(event, threadTs, say, logger);
     } else if (command === Commands.CLOSE_INCIDENT) {
