@@ -138,3 +138,13 @@ can send to Notion MCP.
 
 Reach Feature:
 * Integrate with Grafana MCP. Use it to pull dashboards, logs, and other relevant information into the incident page in Notion. Auto update alerts and runbooks, pull teams etc. Feed relevant action items and RCA from Grafana to make improvements. Can also get on call details and other teams that might need to be paged based on the runbook details.
+
+# Architecture Improvements:
+
+With the FIFO Queue approach, would also need a another FIFO queue to receive
+processed responses from the agent. That would require the Slack app to also
+poll for messages intermittently...          
+  1. docker compose up -d — starts LocalStack, creates queues                                                                       
+  2. npm start — Slack app (producer only)                                                                                          
+  3. npm run start:consumer — consumer with MCP + agent (separate process)                                                        
+                                                                           

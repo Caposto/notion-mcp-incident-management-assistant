@@ -1,0 +1,15 @@
+services:
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - DEBUG=1
+      - DEFAULT_REGION=us-east-1
+    volumes:
+      - "./infra/localstack-init.sh:/etc/localstack/init/ready.d/init-sqs.sh"
+      - "localstack-data:/var/lib/localstack"
+
+volumes:
+  localstack-data:
