@@ -28,3 +28,9 @@ Billing details:
 
 Future improvements: 
 - Queries are expensive. Create incident took around 6 minutes to run
+- Decouple the Slack events from the agent executions. Slack app parses and places commands in a FIFO Queue
+- Agent lambda consumes from the queue and executes Notion MCP actions
+- Use a MCP Gateway if using multiple MCPs (Jira, Grafana, etc)
+- TODO: Can we optimize Claude agent? Shorter prompts to use less tokens. Ensure the agent is only being declared once if that matters
+- Amazon Macie and other filter to remove PII information from agents
+- "Reconciliation service" dump other peoples notes at the end to reconcile
