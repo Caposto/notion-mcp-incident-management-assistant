@@ -7,7 +7,7 @@ services:
       - REGION=us-east-1
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_SERVICE_NAME=coffee-grinds-service
+      - OTEL_SERVICE_NAME=coffee-grinds-service-east
       - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,cloud.region=us-east-1
     networks:
       - observability
@@ -20,7 +20,7 @@ services:
       - REGION=us-west-2
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_SERVICE_NAME=coffee-grinds-service
+      - OTEL_SERVICE_NAME=coffee-grinds-service-west
       - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,cloud.region=us-west-2
     networks:
       - observability

@@ -5,6 +5,7 @@ import type {
   SayFn,
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
+import type { WebClient } from "@slack/web-api";
 import { notionMcpClient } from "../../app.ts";
 import { runAgent } from "../../agent/index.ts";
 import { findIncidentByThread } from "../../notion-rest-client/index.ts";
@@ -23,6 +24,7 @@ enum Commands {
 
 const notionMentionCallback = async ({
   event,
+  client,
   logger,
   say,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
@@ -42,7 +44,7 @@ const notionMentionCallback = async ({
     }
 
     if (command === Commands.CREATE_INCIDENT) {
-      await handleCreateIncident(event, threadTs, say, logger);
+      await handleCreateIncident(event, threadTs, client, say, logger);
     } else if (command === Commands.UPDATE_INCIDENT) {
       await handleUpdateIncident(event, threadTs, say, logger);
     } else if (command === Commands.CLOSE_INCIDENT) {
@@ -58,12 +60,10 @@ const notionMentionCallback = async ({
 
 // ─── create-incident ────────────────────────────────────────────────
 
-// FIXME: An improvement on this would be for the orchestration app to pull in the 
-// alert details and pass it in the userMessage, rather than relying on the engineer to
-// type it out in an "@" mention. This would also allow us to pull in structured data from the alert payload, like severity, //affected services, etc.
 async function handleCreateIncident(
   event: EventFromType<"app_mention">,
   threadTs: string,
+  client: WebClient,
   say: SayFn,
   _logger: Logger,
 ) {
@@ -89,10 +89,16 @@ async function handleCreateIncident(
     .replace(/create-incident/i, "") // remove command
     .trim();
 
-  // FIXME: Pull in parent alert message details
-  // 4. Build the user message with all the context the agent needs
+  // 4. Fetch the parent alert message from the thread
+  const alertContext = await fetchAlertContext(client, event.channel, threadTs);
+
+  // 5. Build the user message with all the context the agent needs
   const userMessage = `Create an incident page with the following context:
 
+  **Alert title:** ${alertContext.title ?? "N/A"}
+  **Alert name:** ${alertContext.alertName ?? "N/A"}
+  **Rule name:** ${alertContext.ruleName ?? "N/A"}
+  **Runbook URL:** ${alertContext.runbookUrl ?? "N/A"}
   **Details from engineer:** ${details || "No additional details provided"}
   **Slack Thread ID:** ${threadTs}
   **Slack Channel:** ${event.channel}
@@ -101,14 +107,14 @@ async function handleCreateIncident(
 
   Search for relevant service info, runbooks, and past incidents, then create the incident page.`;
 
-  // 5. Run the agent — Claude decides which tools to call
+  // 6. Run the agent — Claude decides which tools to call
   const agentResponse = await runAgent(
     CREATE_INCIDENT_PROMPT,
     userMessage,
     notionMcpClient,
   );
 
-  // 6. Post the agent's summary back to Slack
+  // 7. Post the agent's summary back to Slack
   await say({
     text: agentResponse,
     thread_ts: threadTs,
@@ -156,7 +162,7 @@ async function handleUpdateIncident(
 // ─── close-incident ─────────────────────────────────────────────────
 
 async function handleCloseIncident(
-  event: EventFromType<"app_mention">,
+  _event: EventFromType<"app_mention">,
   threadTs: string,
   say: SayFn,
   _logger: Logger,
@@ -186,6 +192,45 @@ async function handleCloseIncident(
 }
 
 // ─── Shared helpers ─────────────────────────────────────────────────
+
+interface AlertContext {
+  title: string | null;
+  alertName: string | null;
+  ruleName: string | null;
+  runbookUrl: string | null;
+}
+
+async function fetchAlertContext(
+  client: WebClient,
+  channel: string,
+  threadTs: string,
+): Promise<AlertContext> {
+  const empty: AlertContext = { title: null, alertName: null, ruleName: null, runbookUrl: null };
+
+  try {
+    const result = await client.conversations.replies({
+      channel,
+      ts: threadTs,
+      limit: 1,
+      inclusive: true,
+    });
+
+    const parentMessage = result.messages?.[0];
+    const attachment = parentMessage?.attachments?.[0];
+    if (!attachment) return empty;
+
+    const text = attachment.text ?? "";
+
+    return {
+      title: attachment.title ?? null,
+      alertName: text.match(/alertname\s*=\s*(.+)/)?.[1]?.trim() ?? null,
+      ruleName: text.match(/rulename\s*=\s*(.+)/)?.[1]?.trim() ?? null,
+      runbookUrl: text.match(/runbook_url\s*=\s*<?([^>\s]+)/)?.[1]?.trim() ?? null,
+    };
+  } catch {
+    return empty;
+  }
+}
 
 async function defaultHandler(event: EventFromType<"app_mention">, say: SayFn) {
   await say({
