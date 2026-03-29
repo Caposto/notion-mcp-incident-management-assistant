@@ -89,6 +89,7 @@ async function handleCreateIncident(
     .replace(/create-incident/i, "") // remove command
     .trim();
 
+  // FIXME: Pull in parent alert message details
   // 4. Build the user message with all the context the agent needs
   const userMessage = `Create an incident page with the following context:
 
@@ -138,12 +139,13 @@ async function handleUpdateIncident(
     .replace(/update-incident/i, "")
     .trim();
 
-  // TODO: Implement using runAgent with UPDATE_INCIDENT_PROMPT
-  // The user message should include:
-  //   - The incident page ID (extracted from the URL)
-  //   - The engineer's update text
-  //   - The current timestamp
-  // The agent will fetch the page, decide what to update, and execute the changes.
+  const userMessage = `Update the incident page with ID ${incidentPageId} with the following update from the engineer: "${updateText}". The update is happening at ${new Date().toISOString()}.`
+
+  const _agentResponse = await runAgent(
+    UPDATE_INCIDENT_PROMPT,
+    userMessage,
+    notionMcpClient,
+  );
 
   await say({
     text: `Update incident received: "${updateText}" — agent integration coming soon.`,
@@ -169,11 +171,13 @@ async function handleCloseIncident(
     return;
   }
 
-  // TODO: Implement using runAgent with CLOSE_INCIDENT_PROMPT
-  // The user message should include:
-  //   - The incident page ID
-  //   - The current timestamp
-  // The agent will fetch the page, draft a postmortem, update status, and check runbook completeness.
+  const userMessage = `Close the incident page with ID ${incidentPageId}. The closure request is coming at ${new Date().toISOString()}.`
+
+  const _agentResponse = await runAgent(
+    CLOSE_INCIDENT_PROMPT,
+    userMessage,
+    notionMcpClient,
+  );
 
   await say({
     text: `Close incident received — agent integration coming soon.`,
