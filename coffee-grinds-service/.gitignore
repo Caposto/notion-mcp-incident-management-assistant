@@ -1,0 +1,2 @@
+#TODO: Expose this with environment variables so users can start grafana with sample alerts
+grafana-datasources.yml 

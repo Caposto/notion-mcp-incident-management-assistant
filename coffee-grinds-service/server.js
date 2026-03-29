@@ -1,12 +1,13 @@
 import express from "express"
 
 const app = express()
-const port = 3001
+const port = 3000
+const region = "unknown" // TODO set region in docker-compose
 let healthy = true
 
 app.get('/', (req, res) => {
   if (healthy) {
-    res.send("Welcome to the Coffee Grinds Service!");
+    return res.send(`Welcome to the Coffee Grinds Service! (${region})`);
   }
   res.status(500).json(
     {
