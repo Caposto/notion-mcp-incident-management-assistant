@@ -8,9 +8,7 @@ import {
 
 const sdk = new NodeSDK({
   metricReader: new PeriodicExportingMetricReader({
-    exporter: new OTLPMetricExporter({
-      url: "http://localhost:4318/v1/metrics",
-    }),
+    exporter: new OTLPMetricExporter(),
     exportIntervalMillis: 10000,
   }),
   instrumentations: [getNodeAutoInstrumentations()],

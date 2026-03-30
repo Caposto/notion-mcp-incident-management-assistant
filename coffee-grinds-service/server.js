@@ -2,7 +2,7 @@ import express from "express"
 
 const app = express()
 const port = 3000
-const region = "unknown" // TODO set region in docker-compose
+const region = process.env.REGION || "unknown"
 let healthy = true
 
 app.get('/', (req, res) => {

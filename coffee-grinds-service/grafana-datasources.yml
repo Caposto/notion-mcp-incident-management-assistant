@@ -28,14 +28,14 @@ groups:
               model:
                 disableTextWrap: false
                 editorMode: builder
-                expr: otel_otelcol_http_server_duration_count{http_status_code="500"}
+                expr: increase(otel_otelcol_http_server_duration_count{http_status_code="500"}[5m])
                 fullMetaSearch: false
                 includeNullMetadata: true
-                instant: true
+                instant: false
                 intervalMs: 1000
                 legendFormat: __auto
                 maxDataPoints: 43200
-                range: false
+                range: true
                 refId: A
                 useBackend: false
             - refId: C
