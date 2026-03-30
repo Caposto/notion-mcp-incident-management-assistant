@@ -1,6 +1,4 @@
-// Uses the Anthropic SDK's built-in BetaToolRunner and MCP helpers
-// to replace the manual agentic loop.
-//
+// Uses the Anthropic SDK's built-in BetaToolRunner and MCP helpers to replace the manual agentic loop.
 // Credit: https://github.com/anthropics/anthropic-sdk-typescript 
 
 import Anthropic from "@anthropic-ai/sdk";

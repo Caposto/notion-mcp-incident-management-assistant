@@ -1,140 +1,108 @@
-# Notion MCP Challenge - Incident Management Assistant
+# Relay - Incident Management Assistant
 
-### Setup
+An AI-powered incident management assistant that connects Slack and Notion via the Model Context Protocol (MCP). Engineers can create, update, and close incidents directly from Slack — a Claude agent handles the heavy lifting, automatically generating structured incident pages, timelines, postmortem drafts, and runbook references in Notion.
 
-1. Create a `.env` file in the `payments-api` directory by filling in the values from `.env.local`.
-  
-## docker-otel-lgtm 
+Built for the [Notion MCP Challenge](https://dev.to/challenges/notion-2026-03-04).
 
-For local development and testing spin up the [docker-otel-lgtm](https://github.com/grafana/docker-otel-lgtm/tree/main?tab=readme-ov-file). 
+---
 
-```bash
-docker run --name lgtm -p 3000:3000 -p 4317:4317 -p 4318:4318 --rm -ti \
-	-v "$PWD"/lgtm/grafana:/data/grafana \
-	-v "$PWD"/lgtm/prometheus:/data/prometheus \
-	-v "$PWD"/lgtm/loki:/data/loki \
-	-e GF_PATHS_DATA=/data/grafana \
-	docker.io/grafana/otel-lgtm:0.8.1
-```
+## How It Works
 
-Access the Grafana dashboard at [localhost:3000](http://localhost:3000)
+1. An engineer mentions the bot in Slack with a command (e.g. `@bot create-incident sev2 payments-api 500 errors spiking`)
+2. The Slack app parses the command and hands it to a Claude agent equipped with Notion MCP tools
+3. The agent autonomously searches the Notion workspace — looking up service details, runbooks, and past incidents — then creates or updates a structured incident page
+4. A summary with a link to the Notion page is posted back to the Slack thread
 
-Then, in another terminal, start the Deno API:
+### Supported Commands
 
-```bash
-cd payments-api
-deno run dev
-```
+| Command | Description |
+|---------|-------------|
+| `create-incident <sev> <service> <description>` | Creates a new incident page in Notion with summary, impact, timeline, related knowledge, and suggested next steps |
+| `update-incident <details>` | Appends a timestamped update to the incident timeline and infers status changes from natural language |
+| `close-incident` | Marks the incident as closed, drafts a postmortem based on the timeline, and flags incomplete runbooks |
 
-Follow the README in the `notion-orchestration-app` directory to set up the Slack app and start the Bolt server.
+---
 
-# TODOS
-- Prevent multiple notion mcp sessions for the same incident
-# Bolt for JavaScript (TypeScript) Template App
+## Setup
 
-This is a generic Bolt for JavaScript (TypeScript) template app used to build out Slack apps.
+### Prerequisites
 
-Before getting started, make sure you have a development workspace where you have permissions to install apps. If you don’t have one setup, go ahead and [create one](https://slack.com/create).
+- [Node.js](https://nodejs.org/) (v18+)
+- A [Slack app](https://api.slack.com/apps) configured with the included `manifest.json` and a Slack webhook enabled and connected to the alerting service of your choice.
+- An [Anthropic API key](https://console.anthropic.com/)
+- A Notion workspace with the expected databases (Services, Incidents, Action Items). [Template](https://pewter-clutch-c09.notion.site/Relay-An-Incident-Management-Assistant-331e03a0298080edbaeddc113e183bad?pvs=74)
 
-## Installation
-
-#### Create a Slack App
-
-1. Open [https://api.slack.com/apps/new](https://api.slack.com/apps/new) and choose "From an app manifest"
-2. Choose the workspace you want to install the application to
-3. Copy the contents of [manifest.json](./manifest.json) into the text box that says `*Paste your manifest code here*` (within the JSON tab) and click _Next_
-4. Review the configuration and click _Create_
-5. Click _Install to Workspace_ and _Allow_ on the screen that follows. You'll then be redirected to the App Configuration dashboard.
-
-#### Environment Variables
-
-Before you can run the app, you'll need to store some environment variables.
-
-1. Copy `.env.sample` to `.env`
-2. Open your apps configuration page from [this list](https://api.slack.com/apps), click _Install App_ in the left hand menu, then copy the _Bot User OAuth Token_ into your `.env` file under `SLACK_BOT_TOKEN`
-3. Click _Basic Information_ from the left hand menu and follow the steps in the _App-Level Tokens_ section to create an app-level token with the `connections:write` scope. Copy that token into your `.env` as `SLACK_APP_TOKEN`.
-
-#### Install Dependencies
+### 1. Install dependencies
 
 ```sh
 npm install
 ```
 
-#### Build the App
+### 2. Configure environment variables
 
 ```sh
-npm run build
+cp .env.sample .env
 ```
 
-For development, use watch mode to automatically rebuild on changes:
+Fill in the values in `.env`:
 
-```sh
-npm run build:watch
-```
+| Variable | Description |
+|----------|-------------|
+| `SLACK_APP_TOKEN` | Slack app-level token (with `connections:write` scope) |
+| `SLACK_BOT_TOKEN` | Bot user OAuth token |
+| `SLACK_CLIENT_ID` | Slack app client ID |
+| `SLACK_CLIENT_SECRET` | Slack app client secret |
+| `SLACK_SIGNING_SECRET` | Slack signing secret |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key |
+| `NOTION_API_KEY` | Notion integration API key |
+| `MCP_SERVER_URL` | Notion MCP server URL (default: `https://mcp.notion.com/mcp`) |
+| `CALLBACK_PORT` | Local OAuth callback port (default: `9876`) |
 
-#### Run Bolt Server
+### 3. Start the app
 
 ```sh
 npm start
 ```
 
+On first launch, the Notion MCP client will initiate an OAuth flow. **Click the authorization link printed in the console** — it will open a browser window to authenticate with Notion. After granting access, you'll be redirected to `localhost:9876/callback` and the app will be ready.
+
 ## Project Structure
 
-### `manifest.json`
-
-`manifest.json` is a configuration for Slack apps. With a manifest, you can create an app with a pre-defined configuration, or adjust the configuration of an existing app.
-
-### `app.ts`
-
-`app.ts` is the entry point for the application and is the file you'll run to start the server. This project aims to keep this file as thin as possible, primarily using it as a way to route inbound requests.
-
-### `/listeners`
-
-Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so `/listeners/shortcuts` handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, `/listeners/views` handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
-
-## App Distribution / OAuth
-
-Only implement OAuth if you plan to distribute your application across multiple workspaces. A separate `app-oauth.ts` file can be found with relevant OAuth settings.
-
-When using OAuth, Slack requires a public URL where it can send requests. In this template app, we've used [`ngrok`](https://ngrok.com/download). Checkout [this guide](https://ngrok.com/docs#getting-started-expose) for setting it up.
-
-Start `ngrok` to access the app on an external network and create a redirect URL for OAuth.
-
 ```
-ngrok http 3000
+.
+├── app.ts                    # Entry point — Slack Bolt server + Notion MCP client init
+├── manifest.json             # Slack app manifest
+│
+├── agent/                    # Claude agent with MCP tool integration
+│   ├── index.ts              #   Agentic loop using Anthropic SDK + MCP tools
+│   └── prompts.ts            #   System prompts for create/update/close commands
+│
+├── listeners/                # Slack event handlers
+│   ├── events/
+│   │   └── notion-mentions.ts  # Core command parser and agent dispatcher
+│   └── messages/
+│       └── sample-message.ts
+│
+├── notion-mcp-client/        # Notion MCP client (OAuth 2.0 PKCE, SSE transport)
+│   └── index.ts
+│
+├── notion-rest-client/       # Notion REST API wrapper (fallback/utility)
+│   └── index.ts
+│
+├── config/                   # Notion workspace IDs and resource references
+│   └── notion-config.ts
+│
+├── lgtm/                     # Grafana/Loki/Prometheus config for local observability
+│
+└── tests/                    # Test suite
 ```
 
-This output should include a forwarding address for `http` and `https` (we'll use `https`). It should look something like the following:
+---
 
-```
-Forwarding   https://3cb89939.ngrok.io -> http://localhost:3000
-```
+## Tech Stack
 
-Navigate to **OAuth & Permissions** in your app configuration and click **Add a Redirect URL**. The redirect URL should be set to your `ngrok` forwarding address with the `slack/oauth_redirect` path appended. For example:
-
-```
-https://3cb89939.ngrok.io/slack/oauth_redirect
-```
-# Slack Orchestration Client (TODO: original orchestration client readme)
-
-A Notion MCP Client service that receives and processes Slack events
-
-Core Features:
-1. Listens for alert pages once an Engineer responds to alert with "/create-incident sev component alert" command (human in the loop): 
-	 - Creates an incident summary poge in Notion, generating a summary, impact, timeline, related knowledge, and next steps
-	 - Sends a message to the Slack channel with the incident summary and a link to the incident page in Notion.
-2. Update incident page with new information when Engineer responds to alert with "/update-incident body" command.
-3. Close incident when Engineer responds to alert with "/close-incident" command.
-	 - Drafts a postmortem summary and adds it to the incident page in Notion.
-	 - Writes a follow-up Jira task in Notion for the responsible team to address any action items identified in the postmortem.
-	 - Writes incident to Notion database
-
-Service DB Schema
-
-id | serviceName | owningTeam | runbookLink | boardLink | postMortems
-
-The only definitive commands should be the open and close. The rest should be free flowing chat prompts that the bot
-can send to Notion MCP.
-
-Reach Feature:
-* Integrate with Grafana MCP. Use it to pull dashboards, logs, and other relevant information into the incident page in Notion. Auto update alerts and runbooks, pull teams etc. Feed relevant action items and RCA from Grafana to make improvements. Can also get on call details and other teams that might need to be paged based on the runbook details.
+- **Slack Bolt** — Real-time Slack event handling via socket mode
+- **Anthropic SDK** — Claude agent with tool use (agentic loop)
+- **Model Context Protocol (MCP)** — Notion MCP server for structured workspace operations
+- **Notion API** — REST client as a supplementary integration
+- **TypeScript + tsx** — Runtime and type safety
